@@ -3,6 +3,7 @@ import {getParamsId, getUserIndexById} from "../utils/middlewares.mjs"
 import {users} from "../utils/constants.mjs"
 import {createUserValidationSchema} from '../utils/validationSchemas.mjs'
 import { validationResult, matchedData, checkSchema } from "express-validator";
+import { User } from "../mongoose/schema/user.mjs"
 
 const router = Router();
 
@@ -32,7 +33,7 @@ router.get("/api/users/:id", getParamsId, (req, res)=>{
 
 router.post("/api/users", 
     checkSchema(createUserValidationSchema),
-    (req, res)=>{
+    async (req, res)=>{
     const result = validationResult(req);
     
     if(!result.isEmpty()){
@@ -40,9 +41,16 @@ router.post("/api/users",
     }
 
     const body = matchedData(req);
-    const newUser = {id: users[users.length-1].id+1, ...body};
-    users.push(newUser);
-    return res.status(201).send(newUser);
+    const newUser = new User(body);
+    try{
+        const savedUser = await newUser.save();
+        return res.status(201).send(savedUser);
+    }
+    catch(err){
+        console.log(err);
+        return res.status(400).send({msg: "User not Saved"});
+    }
+    
 });
 
 router.put("/api/users/:id", getUserIndexById, (req, res)=>{

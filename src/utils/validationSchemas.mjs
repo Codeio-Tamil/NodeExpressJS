@@ -11,9 +11,9 @@ export const createUserValidationSchema = {
             errorMessage: "User Name must be a string"
         }
     },
-    age: {
+    password: {
         notEmpty: {
-            errorMessage: "Age must not be empty"
+            errorMessage: "Password must not be empty"
         }
     }
 }
