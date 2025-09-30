@@ -7,6 +7,7 @@ import passport from "passport";
 import {User} from "../src/mongoose/schema/user.mjs"
 import mongoose from "mongoose";
 import {comparePassword} from "../src/utils/helper.mjs"
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 const app = express();
 app.use(express.json());
@@ -47,6 +48,32 @@ passport.use(new LocalStrategy(
     }
     
 }) );
+
+passport.use(new GoogleStrategy({
+    clientID: '',
+    clientSecret: '',
+    callbackURL: "/auth/google/cb"
+  },
+  async function(accessToken, refreshToken, profile, done) {
+    try{
+        const user = await User.findOne({googleId: profile.id});
+    if(user){
+      return done(null, user);
+    }
+    const email = profile.emails?.[0]?.value;
+    const newUser = await User.create({
+      user_name: profile.displayName,
+      googleId: profile.id,
+      email
+    });
+
+    return done(null, newUser);
+    }
+    catch(err){
+      return done(err, null);
+    }
+  }
+));
 
 passport.serializeUser((user, done)=>{
     done(null, user.id);
@@ -93,6 +120,18 @@ app.post("/login", (req, res, next) => {
     });
   })(req, res, next);
 });
+
+app.get("/auth/google", passport.authenticate("google",
+  { scope: ["profile", "email"] })
+);
+
+app.get("/auth/google/cb", passport.authenticate("google", {
+  failureRedirect: "/"
+}),
+  (req, res) =>{
+    res.send({msg: "Google Login successful", user: req.user});
+  }
+)
 
 app.listen(PORT, ()=>{
     console.log(`App is running on Port ${PORT}`);
